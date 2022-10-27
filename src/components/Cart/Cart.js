@@ -1,11 +1,13 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import CartContext from "../../store/cart-context";
 import Modal from "../UI/Modal";
 import classes from "./Cart.module.css";
 import CartItem from "./CartItem";
+import Checkout from "./Checkout";
 
 const Cart = (props) => {
   const cartCtx = useContext(CartContext);
+  const [orderReady, setOrderReady] = useState(false);
 
   const onAddHandler = (item) => {
     cartCtx.addItem({ ...item, amount: 1 });
@@ -13,6 +15,16 @@ const Cart = (props) => {
 
   const onRemoveHandler = (id) => {
     cartCtx.removeItem(id);
+  };
+
+  const onConfirmOrder = (userData) => {
+    fetch(
+      "https://react-http-a891a-default-rtdb.asia-southeast1.firebasedatabase.app/orders.json",
+      {
+        method: "POST",
+        body: JSON.stringify({ user: userData, orderItems: cartCtx.items }),
+      }
+    );
   };
 
   const cartItems = (
@@ -30,6 +42,19 @@ const Cart = (props) => {
     </ul>
   );
   const totalAmount = `$${cartCtx.totalAmount.toFixed(2)}`;
+  const onOrderHandler = () => setOrderReady(true);
+  const modalAction = (
+    <div className={classes.actions}>
+      <button className={classes["button--alt"]} onClick={props.onCloseCart}>
+        Close
+      </button>
+      {cartCtx.items.length > 0 && (
+        <button className={classes.button} onClick={onOrderHandler}>
+          Order
+        </button>
+      )}
+    </div>
+  );
   return (
     <Modal onClickBackdrop={props.onCloseCart}>
       {cartItems}
@@ -37,14 +62,10 @@ const Cart = (props) => {
         <span>Total Amount</span>
         <span>{totalAmount}</span>
       </div>
-      <div className={classes.actions}>
-        <button className={classes["button--alt"]} onClick={props.onCloseCart}>
-          Close
-        </button>
-        {cartCtx.items.length > 0 && (
-          <button className={classes.button}>Order</button>
-        )}
-      </div>
+      {orderReady && (
+        <Checkout onConfirm={onConfirmOrder} onCancel={props.onCloseCart} />
+      )}
+      {!orderReady && modalAction}
     </Modal>
   );
 };
